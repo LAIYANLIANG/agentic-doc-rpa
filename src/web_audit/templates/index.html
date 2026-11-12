@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AgenticDoc RPA ｜ 智能單據代理與雙引擎視覺 RPA Studio</title>
+<style>
+    :root {
+        --primary: #0284c7;
+        --primary-dark: #0369a1;
+        --bg-main: #f8fafc;
+        --bg-card: #ffffff;
+        --border: #e2e8f0;
+        --text-main: #0f172a;
+        --text-muted: #64748b;
+        --danger-bg: #fef2f2;
+        --danger-border: #fecaca;
+        --danger-text: #b91c1c;
+        --warning-bg: #fffbeb;
+        --warning-border: #fde68a;
+        --warning-text: #b45309;
+        --success-bg: #f0fdf4;
+        --success-border: #bbf7d0;
+        --success-text: #15803d;
+        --purple-bg: #faf5ff;
+        --purple-border: #e9d5ff;
+        --purple-text: #7e22ce;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang TC", "Microsoft JhengHei", sans-serif;
+        background: var(--bg-main); color: var(--text-main); line-height: 1.5; padding: 24px;
+    }
+    .header {
+        display: flex; justify-content: space-between; align-items: center;
+        background: var(--bg-card); padding: 18px 24px; border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid var(--border); margin-bottom: 20px;
+    }
+    .header-title h1 { font-size: 20px; font-weight: 700; color: #0b4f6c; }
+    .header-title p { font-size: 13px; color: var(--text-muted); margin-top: 3px; }
+    .badge-status {
+        display: inline-flex; align-items: center; gap: 6px; background: #ecfdf5; color: #047857;
+        padding: 6px 12px; border-radius: 9999px; font-size: 12px; font-weight: 600; border: 1px solid #a7f3d0;
+    }
+    .badge-dot { width: 8px; height: 8px; background: #10b981; border-radius: 50%; }
+
+    /* Top Nav Switcher */
+    .nav-bar {
+        display: flex; gap: 12px; margin-bottom: 20px; background: #e2e8f0; padding: 6px; border-radius: 12px;
+    }
+    .nav-tab {
+        flex: 1; padding: 10px 16px; border-radius: 8px; border: none; font-size: 14px; font-weight: 600;
+        background: transparent; color: #475569; cursor: pointer; transition: all 0.2s; display: flex;
+        align-items: center; justify-content: center; gap: 8px;
+    }
+    .nav-tab:hover { color: var(--primary-dark); }
+    .nav-tab.active { background: #ffffff; color: var(--primary); box-shadow: 0 2px 4px rgba(0,0,0,0.06); }
+
+    .view-panel { display: none; }
+    .view-panel.active { display: block; }
+
+    /* Sample Selector */
+    .sample-bar {
+        background: var(--bg-card); padding: 16px 20px; border-radius: 12px; border: 1px solid var(--border);
+        margin-bottom: 24px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    }
+    .sample-label { font-size: 13px; font-weight: 600; color: var(--text-muted); white-space: nowrap; }
+    .sample-btn {
+        background: #f1f5f9; border: 1px solid #cbd5e1; color: #334155; padding: 6px 14px;
+        border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s;
+    }
+    .sample-btn:hover { background: #e2e8f0; border-color: #94a3b8; }
+    .sample-btn.active { background: #0284c7; color: #fff; border-color: #0284c7; }
+
+    /* Drop Zone */
+    .dropzone {
+        border: 2px dashed #94a3b8; border-radius: 12px; padding: 32px 20px; text-align: center;
+        background: #fdfdfd; cursor: pointer; transition: all 0.2s; margin-bottom: 24px;
+    }
+    .dropzone:hover, .dropzone.dragover { border-color: var(--primary); background: #f0f9ff; }
+    .dropzone-icon { font-size: 36px; margin-bottom: 8px; }
+    .dropzone-text { font-size: 15px; font-weight: 600; color: #334155; }
+    .dropzone-sub { font-size: 12px; color: #64748b; margin-top: 4px; }
+    #fileInput { display: none; }
+
+    /* Main Grid */
+    .grid-container { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    @media (max-width: 1024px) { .grid-container { grid-template-columns: 1fr; } }
+
+    .card {
+        background: var(--bg-card); border-radius: 12px; border: 1px solid var(--border);
+        padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; flex-direction: column;
+    }
+    .card-title {
+        font-size: 16px; font-weight: 700; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;
+    }
+
+    /* Left: Document View */
+    .preview-box {
+        position: relative; border: 1px solid #cbd5e1; border-radius: 8px; background: #334155;
+        min-height: 480px; display: flex; justify-content: center; align-items: flex-start;
+        overflow: auto; max-height: 720px;
+    }
+    .preview-img { max-width: 100%; height: auto; display: block; }
+    .preview-canvas { position: absolute; top: 0; left: 0; pointer-events: none; }
+    .preview-empty {
+        display: flex; flex-direction: column; justify-content: center; align-items: center;
+        height: 480px; color: #94a3b8; font-size: 14px;
+    }
+
+    /* Right: Structured Data */
+    .metrics-row {
+        display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap;
+    }
+    .metric-pill {
+        background: #f1f5f9; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; color: #475569;
+    }
+    .metric-pill strong { color: #0f172a; }
+
+    .alert-card {
+        padding: 12px 16px; border-radius: 8px; font-size: 13px; font-weight: 500;
+        margin-bottom: 12px; display: flex; align-items: flex-start; gap: 10px; line-height: 1.5;
+    }
+    .alert-danger { background: var(--danger-bg); border: 1px solid var(--danger-border); color: var(--danger-text); }
+    .alert-warning { background: var(--warning-bg); border: 1px solid var(--warning-border); color: var(--warning-text); }
+    .alert-success { background: var(--success-bg); border: 1px solid var(--success-border); color: var(--success-text); }
+    .alert-purple { background: var(--purple-bg); border: 1px solid var(--purple-border); color: var(--purple-text); }
+
+    /* Tabs */
+    .tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+    .tab {
+        padding: 8px 16px; font-size: 13px; font-weight: 600; color: var(--text-muted);
+        cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s;
+    }
+    .tab:hover { color: var(--text-main); }
+    .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* Data Table */
+    .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .data-table th, .data-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+    .data-table th { background: #f8fafc; color: var(--text-muted); font-weight: 600; width: 40%; }
+    .data-table tr:hover td { background: #f1f5f9; }
+
+    .raw-lines-box {
+        background: #0f172a; color: #e2e8f0; font-family: ui-monospace, Menlo, Monaco, Consolas, monospace;
+        font-size: 12px; padding: 16px; border-radius: 8px; max-height: 480px; overflow-y: auto; line-height: 1.6;
+    }
+    .line-no { color: #64748b; margin-right: 8px; user-select: none; }
+
+    .btn-primary {
+        background: var(--primary); color: #fff; border: none; padding: 10px 20px;
+        border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s;
+        display: inline-flex; align-items: center; gap: 8px;
+    }
+    .btn-primary:hover { background: var(--primary-dark); }
+
+    .btn-green {
+        background: #10b981; color: #fff; border: none; padding: 12px 24px;
+        border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer; transition: all 0.2s;
+        display: inline-flex; align-items: center; gap: 8px; width: 100%; justify-content: center;
+    }
+    .btn-green:hover { background: #059669; }
+    .btn-green:disabled { background: #94a3b8; cursor: not-allowed; }
+
+    .copy-btn {
+        background: #f1f5f9; border: 1px solid #cbd5e1; padding: 4px 10px; border-radius: 6px;
+        font-size: 12px; cursor: pointer; color: #475569;
+    }
+    .copy-btn:hover { background: #e2e8f0; }
+
+    .spinner {
+        display: none; width: 20px; height: 20px; border: 3px solid rgba(2, 132, 199, 0.2);
+        border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* RPA Studio Specific */
+    .mode-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+    .mode-card {
+        border: 2px solid var(--border); border-radius: 10px; padding: 14px; cursor: pointer;
+        transition: all 0.2s; background: #fff;
+    }
+    .mode-card:hover { border-color: #94a3b8; }
+    .mode-card.selected { border-color: var(--primary); background: #f0f9ff; }
+    .mode-title { font-size: 14px; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 6px; }
+    .mode-desc { font-size: 12px; color: #64748b; margin-top: 4px; line-height: 1.4; }
+
+    .form-group { margin-bottom: 16px; }
+    .form-label { font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 6px; display: block; }
+    .form-control {
+        width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px;
+        font-size: 13px; font-family: inherit; transition: all 0.2s; background: #fff;
+    }
+    .form-control:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15); }
+
+    .script-textarea {
+        font-family: ui-monospace, Menlo, Monaco, Consolas, monospace; font-size: 13px; line-height: 1.5;
+        min-height: 180px; resize: vertical;
+    }
+
+    .timeline { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; max-height: 380px; overflow-y: auto; }
+    .timeline-item {
+        border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; background: #fff;
+        display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: all 0.15s;
+    }
+    .timeline-item:hover { border-color: var(--primary); background: #f8fafc; }
+    .timeline-item.active { border-color: var(--primary); background: #f0f9ff; }
+    .timeline-left { display: flex; align-items: center; gap: 10px; }
+    .step-badge {
+        width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+        font-size: 11px; font-weight: 700; background: #e2e8f0; color: #475569;
+    }
+    .step-badge.pass { background: #dcfce7; color: #15803d; }
+    .step-badge.fail { background: #fee2e2; color: #b91c1c; }
+    .step-badge.skip { background: #fef3c7; color: #b45309; }
+
+    .step-text { font-size: 13px; font-weight: 600; color: #1e293b; }
+    .step-meta { font-size: 12px; color: #64748b; }
+
+    .screenshot-viewer {
+        background: #1e293b; border-radius: 8px; padding: 12px; min-height: 280px;
+        display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden;
+    }
+    .screenshot-img { max-width: 100%; max-height: 420px; border-radius: 6px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+</style>
+</head>
+<body>
+
+    <!-- Header -->
+    <div class="header">
+        <div class="header-title">
+            <h1>AgenticDoc RPA ｜ 智能單據代理與雙引擎視覺 RPA Studio</h1>
+            <p>100% 地端原生運作 ｜ OmniTrace 視覺 OCR 審計抽取 ｜ 雙引擎（Web DOM + 真實 Chrome 直通）RPA</p>
+        </div>
+        <div class="badge-status">
+            <div class="badge-dot"></div>
+            <span>系統在線 (純本機零外洩)</span>
+        </div>
+    </div>
+
+    <!-- Navigation Switcher -->
+    <div class="nav-bar">
+        <button class="nav-tab active" id="btnNavAudit" onclick="switchView('viewAudit')">
+            📄 商業單據 OCR 與品質審計 (品保/採購/FA)
+        </button>
+        <button class="nav-tab" id="btnNavRPA" onclick="switchView('viewRPA')">
+            🤖 自然語言 RPA 工作流程 Studio (雙模執行/視窗演示)
+        </button>
+    </div>
+
+    <!-- ==================== VIEW 1: 商業單據 OCR 審計 ==================== -->
+    <div id="viewAudit" class="view-panel active">
+        <!-- Sample Document Bar -->
+        <div class="sample-bar">
+            <span class="sample-label">預設測試單據：</span>
+            <button class="sample-btn active" onclick="loadSample('COA-HD-2606-0418')">供應商 CoA (宏達電子)</button>
+            <button class="sample-btn" onclick="loadSample('PO-LY-2608-0075')">客戶採購 PO (凌雲電子)</button>
+            <button class="sample-btn" onclick="loadSample('FA-2026-117')">FA 失效分析報告 (實驗室)</button>
+            <button class="sample-btn" onclick="loadSample('IQC-010000003301')">IQC 進料檢驗紀錄</button>
+            <button class="sample-btn" onclick="loadSample('DWG-SUB-BT64-01')">基板規格藍圖工程圖</button>
+        </div>
+
+        <!-- Dropzone for Upload -->
+        <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()">
+            <div class="dropzone-icon">📥</div>
+            <div class="dropzone-text">點擊或拖曳單據至此上傳 (支援 PDF 原生解析、PNG、JPG)</div>
+            <div class="dropzone-sub">由 macOS Quartz 自動以 150 DPI 高解析光柵化，本地 RapidOCR 萃取欄位與審計</div>
+            <input type="file" id="fileInput" accept="image/*,.pdf" onchange="handleFileUpload(event)">
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; margin-bottom: 16px;">
+            <button class="btn-primary" id="uploadBtn" onclick="document.getElementById('fileInput').click()">
+                <span>📄 上傳並執行 AI 審計</span>
+            </button>
+        </div>
+
+        <!-- Main Grid -->
+        <div class="grid-container" id="result">
+            <!-- Left: Document View -->
+            <div class="card">
+                <div class="card-title">
+                    <span id="docTitle">單據影像預覽 (COA-HD-2606-0418)</span>
+                    <label style="font-size: 12px; font-weight: normal; color: var(--text-muted); cursor: pointer;">
+                        <input type="checkbox" id="bboxToggle" checked onchange="toggleBBox()"> 顯示 OCR 邊界框 (BBox)
+                    </label>
+                </div>
+                <div class="preview-box" id="previewContainer">
+                    <div class="preview-empty" id="previewEmpty">請選擇單據或上傳檔案以開始分析</div>
+                    <img id="previewImg" class="preview-img" style="display:none;" onload="renderCanvas()">
+                    <canvas id="previewCanvas" class="preview-canvas" style="display:none;"></canvas>
+                </div>
+            </div>
+
+            <!-- Right: Structured Data -->
+            <div class="card">
+                <div class="card-title">
+                    <span>結構化抽取與商業審計結果</span>
+                    <div class="spinner" id="loadingSpinner"></div>
+                </div>
+
+                <!-- Metrics Pills -->
+                <div class="metrics-row" id="metricsRow" style="display: none;">
+                    <div class="metric-pill">單據 ID: <strong id="metricDocId">-</strong></div>
+                    <div class="metric-pill">推論耗時: <strong id="metricElapsed">-</strong></div>
+                    <div class="metric-pill">文字塊數: <strong id="metricBlocks">-</strong></div>
+                    <div class="metric-pill">審計判定: <strong id="metricStatus" class="badge">-</strong></div>
+                </div>
+
+                <!-- Audit Alerts Container -->
+                <div id="alertsContainer"></div>
+
+                <!-- Tabs -->
+                <div class="tabs">
+                    <div class="tab active" onclick="switchTab('tabStructured')">結構化欄位清單</div>
+                    <div class="tab" onclick="switchTab('tabRaw')">原始 OCR 識別文本</div>
+                    <div class="tab" onclick="switchTab('tabJson')">完整 JSON 報告</div>
+                </div>
+
+                <!-- Tab 1: Structured Fields -->
+                <div class="tab-content active" id="tabStructured">
+                    <div style="margin-bottom: 10px; display: flex; justify-content: flex-end;">
+                        <button class="copy-btn" onclick="copyJson()">複製 JSON</button>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr><th>欄位名稱 / 屬性</th><th>辨識抽取數值</th></tr>
+                        </thead>
+                        <tbody id="tableBody">
+                            <tr><td colspan="2" style="text-align: center; color: var(--text-muted);">尚無資料</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Tab 2: Raw Lines -->
+                <div class="tab-content" id="tabRaw">
+                    <div class="raw-lines-box" id="rawLinesBox">
+                        <span style="color: #64748b;">尚無文字</span>
+                    </div>
+                </div>
+
+                <!-- Tab 3: JSON Payload -->
+                <div class="tab-content" id="tabJson">
+                    <pre class="raw-lines-box" id="jsonBox" style="color: #38bdf8;">{}</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== VIEW 2: 自然語言 RPA 工作流程 Studio ==================== -->
+    <div id="viewRPA" class="view-panel">
+        <!-- Mode Switcher -->
+        <div class="form-group">
+            <label class="form-label">選擇 RPA 執行模式：</label>
+            <div class="mode-cards" style="grid-template-columns: 1fr 1fr 1fr;">
+                <div class="mode-card selected" id="cardModeReal" onclick="selectRPAMode('real_chrome')">
+                    <div class="mode-title">🌐 日常 Chrome 帳號直通模式 (強烈推薦)</div>
+                    <div class="mode-desc">直接操控您平常用的真實 Google Chrome！自動保持您的個人 Google 帳號與登入狀態，視窗永久保持開啟！</div>
+                </div>
+                <div class="mode-card" id="cardModeWindow" onclick="selectRPAMode('window')">
+                    <div class="mode-title">🖥️ 獨立視窗模式 (Playwright)</div>
+                    <div class="mode-desc">彈出獨立視窗，慢動作 (1.0s) + 霓虹光圈高亮標記正在點擊的元件，每一步清清楚楚。</div>
+                </div>
+                <div class="mode-card" id="cardModeBackend" onclick="selectRPAMode('backend')">
+                    <div class="mode-title">⚙️ 背端極速模式 (Headless)</div>
+                    <div class="mode-desc">背景無頭極速運行，不搶奪螢幕游標與視窗焦點，適合大量定時排程批次執行。</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Template Selector -->
+        <div class="sample-bar" style="margin-bottom: 20px;">
+            <span class="sample-label">⚡ 快速套用範本：</span>
+            <button class="sample-btn" onclick="applyRPATemplate('youtube')">🎵 YouTube 讀書音樂自動播放 (視窗模式)</button>
+            <button class="sample-btn" onclick="applyRPATemplate('audit')">📊 本地 Web 審計平台自動化核驗 (純地端)</button>
+            <button class="sample-btn" onclick="applyRPATemplate('error_skip')">⚙️ 例外策略示範：遇到錯誤自動跳過</button>
+        </div>
+
+        <!-- Studio Main Grid -->
+        <div class="grid-container">
+            <!-- Left: Script Editor & Controls -->
+            <div class="card">
+                <div class="card-title">
+                    <span>編寫自然語言 RPA 腳本</span>
+                    <span style="font-size: 12px; color: var(--text-muted);">支援白話中文/英文</span>
+                </div>
+
+                <div class="alert-card alert-purple" style="font-size: 12px;">
+                    💡 <strong>語法小提示：</strong>支援「前往網址: URL」、「在「欄位名」輸入: 數值」、「按下鍵盤: Enter」、「點擊包含文字: 按鈕名」、「如果失敗: 跳過/重試」、「截圖說明: 文字」
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">腳本指令內容：</label>
+                    <textarea id="rpaScriptInput" class="form-control script-textarea" placeholder="前往網址: https://www.youtube.com&#10;在「搜尋」輸入: 讀書長音樂&#10;按下鍵盤: Enter&#10;如果失敗: 跳過&#10;點擊包含文字: 讀書&#10;截圖說明: 音樂播放完成存證"></textarea>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+                    <div>
+                        <label class="form-label">預設例外處理策略：</label>
+                        <select id="rpaOnError" class="form-control">
+                            <option value="abort">遇到錯誤時：中斷終止 (Abort)</option>
+                            <option value="skip" selected>遇到錯誤時：跳過繼續執行 (Skip)</option>
+                            <option value="retry">遇到錯誤時：重試 1 次 (Retry)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label">慢動作延遲 (毫秒)：</label>
+                        <input type="number" id="rpaSlowMo" class="form-control" value="1000" min="0" step="200">
+                    </div>
+                </div>
+
+                <!-- Session Persistence & Window Keep-Open Controls -->
+                <div style="display: flex; gap: 18px; margin-bottom: 16px; flex-wrap: wrap; background: #f8fafc; padding: 12px 14px; border-radius: 8px; border: 1px solid var(--border);">
+                    <label style="font-size: 13px; font-weight: 600; color: #334155; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                        <input type="checkbox" id="rpaKeepOpen" checked> 🎵 視窗持續保持開啟 (不自動關閉)
+                    </label>
+                    <label style="font-size: 13px; font-weight: 600; color: #334155; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                        <input type="checkbox" id="rpaUseProfile" checked> 🔑 記住 Google 帳號與登入狀態 (持久化 Profile)
+                    </label>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">圖片上傳與輔助說明 (可選)：</label>
+                    <input type="text" id="rpaRefDesc" class="form-control" placeholder="例如：預期在畫面右上角出現藍色『確認』按鈕" style="margin-bottom: 8px;">
+                    <div style="font-size: 11px; color: var(--text-muted);">可用於輔助比對目標或作為存證說明。</div>
+                </div>
+
+                <button class="btn-green" id="btnRunRPA" onclick="executeRPAScript()">
+                    <span>🚀 啟動 RPA 工作流程</span>
+                    <div class="spinner" id="rpaSpinner" style="display: none; border-top-color: #fff;"></div>
+                </button>
+            </div>
+
+            <!-- Right: Live Execution Timeline & Screenshots -->
+            <div class="card">
+                <div class="card-title">
+                    <span>即時執行狀態與步驟存證</span>
+                    <span id="rpaStatusBadge" class="badge-status" style="display: none;">
+                        <span id="rpaStatusText">執行中</span>
+                    </span>
+                </div>
+
+                <!-- Metrics Row -->
+                <div class="metrics-row" id="rpaMetrics" style="display: none;">
+                    <div class="metric-pill">總耗時: <strong id="rpaTotalTime">0s</strong></div>
+                    <div class="metric-pill">總步數: <strong id="rpaTotalSteps">0</strong></div>
+                    <div class="metric-pill">成功: <strong id="rpaPassedSteps" style="color: #15803d;">0</strong></div>
+                    <div class="metric-pill">跳過: <strong id="rpaSkippedSteps" style="color: #b45309;">0</strong></div>
+                    <div class="metric-pill">失敗: <strong id="rpaFailedSteps" style="color: #b91c1c;">0</strong></div>
+                </div>
+
+                <!-- Timeline List -->
+                <label class="form-label" style="margin-top: 6px;">步驟執行歷史 (點擊可檢視截圖)：</label>
+                <div class="timeline" id="rpaTimeline">
+                    <div style="text-align: center; color: var(--text-muted); padding: 30px 0; font-size: 13px;">
+                        尚未執行任何工作流程，點擊左側「啟動 RPA 工作流程」開始執行。
+                    </div>
+                </div>
+
+                <!-- Step Screenshot Viewer -->
+                <label class="form-label" style="margin-top: 16px;">步驟畫面存證 (Screenshot Viewer)：</label>
+                <div class="screenshot-viewer" id="rpaScreenshotViewer">
+                    <span style="color: #94a3b8; font-size: 13px;" id="rpaScreenshotEmpty">執行後將在此呈現每個步驟的高解析存證截圖</span>
+                    <img id="rpaScreenshotImg" class="screenshot-img" style="display: none;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    let currentData = null;
+    let textBlocks = [];
+    let selectedRPAMode = 'window';
+    let rpaExecutionSteps = [];
+
+    const isFileProto = window.location.protocol === 'file:';
+    const API_BASE = isFileProto ? 'http://127.0.0.1:8080' : '';
+
+    // 切換主分頁
+    function switchView(viewId) {
+        document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+
+        document.getElementById(viewId).classList.add('active');
+        if (viewId === 'viewAudit') {
+            document.getElementById('btnNavAudit').classList.add('active');
+        } else {
+            document.getElementById('btnNavRPA').classList.add('active');
+        }
+    }
+
+    // 選擇 RPA 模式
+    function selectRPAMode(mode) {
+        selectedRPAMode = mode;
+        const cardReal = document.getElementById('cardModeReal');
+        const cardWin = document.getElementById('cardModeWindow');
+        const cardBack = document.getElementById('cardModeBackend');
+        if (cardReal) cardReal.classList.toggle('selected', mode === 'real_chrome');
+        if (cardWin) cardWin.classList.toggle('selected', mode === 'window');
+        if (cardBack) cardBack.classList.toggle('selected', mode === 'backend');
+    }
+
+    // 快速套用範本
+    function applyRPATemplate(templateKey) {
+        const scriptInput = document.getElementById('rpaScriptInput');
+        const onError = document.getElementById('rpaOnError');
+
+        if (templateKey === 'youtube') {
+            selectRPAMode('real_chrome');
+            onError.value = 'skip';
+            scriptInput.value = `喚醒日常真實瀏覽器: Google Chrome\n前往網址: https://www.youtube.com\n在「搜尋」輸入: 讀書長音樂\n按下鍵盤: Enter\n如果失敗: 跳過\n點擊包含文字: 讀書\n截圖說明: 真實帳號視窗持續播放中`;
+        } else if (templateKey === 'audit') {
+            selectRPAMode('window');
+            onError.value = 'abort';
+            scriptInput.value = `前往網址: http://127.0.0.1:8080\n點擊包含文字: 供應商 CoA\n等待 2 秒\n截圖說明: CoA 單據審計與含水量超標警示存證`;
+        } else if (templateKey === 'error_skip') {
+            selectRPAMode('backend');
+            onError.value = 'skip';
+            scriptInput.value = `前往網址: http://127.0.0.1:8080\n如果失敗: 跳過\n點擊包含文字: 一個絕對不存在的神秘按鈕\n點擊包含文字: 供應商 CoA\n截圖說明: 示範例外跳過後繼續執行的存證`;
+        }
+    }
+
+    // 執行自然語言 RPA 腳本
+    async function executeRPAScript() {
+        const scriptText = document.getElementById('rpaScriptInput').value.trim();
+        if (!scriptText) {
+            alert('請先輸入自然語言 RPA 腳本指令！');
+            return;
+        }
+
+        const btnRun = document.getElementById('btnRunRPA');
+        const spinner = document.getElementById('rpaSpinner');
+        const badge = document.getElementById('rpaStatusBadge');
+        const badgeText = document.getElementById('rpaStatusText');
+        const timeline = document.getElementById('rpaTimeline');
+
+        btnRun.disabled = true;
+        spinner.style.display = 'inline-block';
+        badge.style.display = 'inline-flex';
+        badgeText.innerText = '🤖 RPA 正在執行中...';
+        badge.style.background = '#eff6ff';
+        badge.style.borderColor = '#bfdbfe';
+        badge.style.color = '#1d4ed8';
+
+        timeline.innerHTML = `<div style="text-align: center; color: #0284c7; padding: 20px 0;">🚀 正在啟動 ${selectedRPAMode === 'window' ? '視窗模式 (Chromium)' : '背端模式'}，執行指令序列中...</div>`;
+
+        const payload = {
+            script_text: scriptText,
+            mode: selectedRPAMode,
+            default_on_error: document.getElementById('rpaOnError').value,
+            slow_mo_ms: parseInt(document.getElementById('rpaSlowMo').value) || 1000,
+            keep_open: document.getElementById('rpaKeepOpen').checked,
+            use_persistent_profile: document.getElementById('rpaUseProfile').checked,
+            ref_desc: document.getElementById('rpaRefDesc').value
+        };
+
+        try {
+            const resp = await fetch(`${API_BASE}/api/rpa/execute`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!resp.ok) {
+                const errData = await resp.json().catch(() => ({}));
+                throw new Error(errData.error || `HTTP ${resp.status}`);
+            }
+
+            const data = await resp.json();
+            renderRPAResults(data);
+        } catch (err) {
+            timeline.innerHTML = `<div class="alert-card alert-danger">❌ 執行失敗: ${err.message}</div>`;
+            badgeText.innerText = '❌ 執行失敗';
+            badge.style.background = '#fef2f2';
+            badge.style.borderColor = '#fecaca';
+            badge.style.color = '#b91c1c';
+        } finally {
+            btnRun.disabled = false;
+            spinner.style.display = 'none';
+        }
+    }
+
+    // 渲染 RPA 執行成果與時間軸
+    function renderRPAResults(data) {
+        const badge = document.getElementById('rpaStatusBadge');
+        const badgeText = document.getElementById('rpaStatusText');
+        const metricsRow = document.getElementById('rpaMetrics');
+
+        metricsRow.style.display = 'flex';
+        document.getElementById('rpaTotalTime').innerText = `${data.total_duration_s}s`;
+        document.getElementById('rpaTotalSteps').innerText = data.total_steps;
+        document.getElementById('rpaPassedSteps').innerText = data.passed_steps;
+        document.getElementById('rpaSkippedSteps').innerText = data.skipped_steps;
+        document.getElementById('rpaFailedSteps').innerText = data.failed_steps;
+
+        if (data.status === 'SUCCESS') {
+            badgeText.innerText = '✅ 執行全數完成';
+            badge.style.background = '#ecfdf5';
+            badge.style.borderColor = '#a7f3d0';
+            badge.style.color = '#047857';
+        } else {
+            badgeText.innerText = '⚠️ 部分步驟未通過';
+            badge.style.background = '#fffbeb';
+            badge.style.borderColor = '#fde68a';
+            badge.style.color = '#b45309';
+        }
+
+        rpaExecutionSteps = data.steps || [];
+        const timeline = document.getElementById('rpaTimeline');
+        timeline.innerHTML = '';
+
+        if (rpaExecutionSteps.length === 0) {
+            timeline.innerHTML = '<div style="text-align: center; color: #64748b;">無步驟資料</div>';
+            return;
+        }
+
+        rpaExecutionSteps.forEach((st, idx) => {
+            const div = document.createElement('div');
+            div.className = `timeline-item ${idx === 0 ? 'active' : ''}`;
+            div.onclick = () => selectRPAStep(idx);
+
+            const badgeClass = st.status === 'PASS' ? 'pass' : (st.status === 'SKIPPED' ? 'skip' : 'fail');
+            const badgeIcon = st.status === 'PASS' ? '✓' : (st.status === 'SKIPPED' ? '↷' : '✗');
+
+            div.innerHTML = `
+                <div class="timeline-left">
+                    <div class="step-badge ${badgeClass}">${badgeIcon}</div>
+                    <div>
+                        <div class="step-text">步驟 ${st.step_id}: ${st.description}</div>
+                        <div class="step-meta">類型: ${st.action_type} ｜ 耗時: ${st.duration_s}s ${st.error_msg ? `｜ 說明: ${st.error_msg}` : ''}</div>
+                    </div>
+                </div>
+                <div style="font-size: 11px; font-weight: 700; color: ${st.status === 'PASS' ? '#15803d' : (st.status === 'SKIPPED' ? '#b45309' : '#b91c1c')};">
+                    ${st.status}
+                </div>
+            `;
+            timeline.appendChild(div);
+        });
+
+        selectRPAStep(0);
+    }
+
+    function selectRPAStep(stepIdx) {
+        document.querySelectorAll('.timeline-item').forEach((it, i) => {
+            it.classList.toggle('active', i === stepIdx);
+        });
+
+        const step = rpaExecutionSteps[stepIdx];
+        const emptyEl = document.getElementById('rpaScreenshotEmpty');
+        const imgEl = document.getElementById('rpaScreenshotImg');
+
+        if (step && step.screenshot) {
+            emptyEl.style.display = 'none';
+            imgEl.style.display = 'block';
+            imgEl.src = step.screenshot;
+        } else {
+            emptyEl.style.display = 'block';
+            emptyEl.innerText = `步驟 ${step ? step.step_id : ''} 未擷取到螢幕畫面`;
+            imgEl.style.display = 'none';
+        }
+    }
+
+    // ==================== 原有單據 OCR 審計相關函數 ====================
+    async function loadSample(docId) {
+        document.querySelectorAll('.sample-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.getAttribute('onclick').includes(docId));
+        });
+
+        document.getElementById('loadingSpinner').style.display = 'inline-block';
+        try {
+            const resp = await fetch(`${API_BASE}/api/analyze-sample?doc_id=${encodeURIComponent(docId)}`, { method: 'POST' });
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            const data = await resp.json();
+            renderResult(data);
+        } catch (err) {
+            alert('載入預設單據失敗: ' + err.message);
+        } finally {
+            document.getElementById('loadingSpinner').style.display = 'none';
+        }
+    }
+
+    async function handleFileUpload(evt) {
+        const file = evt.target.files[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        document.getElementById('loadingSpinner').style.display = 'inline-block';
+        try {
+            const resp = await fetch(`${API_BASE}/api/upload`, { method: 'POST', body: formData });
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            const data = await resp.json();
+            renderResult(data);
+        } catch (err) {
+            alert('上傳分析失敗: ' + err.message);
+        } finally {
+            document.getElementById('loadingSpinner').style.display = 'none';
+        }
+    }
+
+    function renderResult(data) {
+        currentData = data;
+        textBlocks = data.raw_blocks || [];
+
+        document.getElementById('docTitle').innerText = `單據影像預覽 (${data.doc_name || data.doc_id})`;
+        document.getElementById('metricsRow').style.display = 'flex';
+        document.getElementById('metricDocId').innerText = data.doc_id || 'UPLOADED';
+        document.getElementById('metricElapsed').innerText = (data.ocr_duration_s || 0).toFixed(2) + 's';
+        document.getElementById('metricBlocks').innerText = (data.raw_blocks || []).length;
+
+        const statusEl = document.getElementById('metricStatus');
+        if (data.audit_notes && data.audit_notes.some(n => n.includes('🚨'))) {
+            statusEl.innerText = '🚨 重大異常 (REJECT)';
+            statusEl.style.color = '#b91c1c';
+        } else if (data.audit_notes && data.audit_notes.some(n => n.includes('⚠️'))) {
+            statusEl.innerText = '⚠️ 流程注意';
+            statusEl.style.color = '#b45309';
+        } else {
+            statusEl.innerText = '✅ 檢驗合格 (PASS)';
+            statusEl.style.color = '#15803d';
+        }
+
+        const alertsContainer = document.getElementById('alertsContainer');
+        alertsContainer.innerHTML = '';
+        if (data.audit_notes && data.audit_notes.length > 0) {
+            data.audit_notes.forEach(note => {
+                const div = document.createElement('div');
+                div.className = 'alert-card ' + (note.includes('🚨') ? 'alert-danger' : (note.includes('⚠️') ? 'alert-warning' : 'alert-success'));
+                div.innerHTML = note;
+                alertsContainer.appendChild(div);
+            });
+        }
+
+        const tbody = document.getElementById('tableBody');
+        tbody.innerHTML = '';
+        const fields = data.extracted_fields || {};
+        const fieldKeys = Object.keys(fields);
+        if (fieldKeys.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="2" style="text-align: center; color: #64748b;">未抽取到結構化欄位</td></tr>';
+        } else {
+            fieldKeys.forEach(k => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<th>${k}</th><td><strong>${fields[k]}</strong></td>`;
+                tbody.appendChild(tr);
+            });
+        }
+
+        const rawBox = document.getElementById('rawLinesBox');
+        rawBox.innerHTML = '';
+        (data.raw_lines || []).forEach((l, idx) => {
+            const div = document.createElement('div');
+            div.innerHTML = `<span class="line-no">${String(idx + 1).padStart(2, '0')}</span> ${l}`;
+            rawBox.appendChild(div);
+        });
+
+        document.getElementById('jsonBox').innerText = JSON.stringify(data, null, 2);
+
+        if (data.image_data) {
+            document.getElementById('previewEmpty').style.display = 'none';
+            const img = document.getElementById('previewImg');
+            img.style.display = 'block';
+            img.src = data.image_data;
+        }
+    }
+
+    function renderCanvas() {
+        const img = document.getElementById('previewImg');
+        const canvas = document.getElementById('previewCanvas');
+        canvas.style.display = document.getElementById('bboxToggle').checked ? 'block' : 'none';
+        canvas.width = img.clientWidth;
+        canvas.height = img.clientHeight;
+
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        if (!textBlocks || textBlocks.length === 0) return;
+        const scaleX = img.clientWidth / img.naturalWidth;
+        const scaleY = img.clientHeight / img.naturalHeight;
+
+        ctx.strokeStyle = '#0284c7';
+        ctx.lineWidth = 1.5;
+        ctx.fillStyle = 'rgba(2, 132, 199, 0.12)';
+
+        textBlocks.forEach(item => {
+            const box = item.box;
+            if (box && box.length === 4) {
+                const x = box[0][0] * scaleX;
+                const y = box[0][1] * scaleY;
+                const w = (box[1][0] - box[0][0]) * scaleX;
+                const h = (box[2][1] - box[0][1]) * scaleY;
+                ctx.fillRect(x, y, w, h);
+                ctx.strokeRect(x, y, w, h);
+            }
+        });
+    }
+
+    function toggleBBox() {
+        const canvas = document.getElementById('previewCanvas');
+        canvas.style.display = document.getElementById('bboxToggle').checked ? 'block' : 'none';
+    }
+
+    function switchTab(tabId) {
+        document.querySelectorAll('.tab').forEach((t) => {
+            t.classList.toggle('active', t.getAttribute('onclick').includes(tabId));
+        });
+        document.querySelectorAll('.tab-content').forEach(c => {
+            c.classList.toggle('active', c.id === tabId);
+        });
+    }
+
+    function copyJson() {
+        if (!currentData) return;
+        navigator.clipboard.writeText(JSON.stringify(currentData.extracted_fields || {}, null, 2))
+            .then(() => alert('已成功複製結構化 JSON！'));
+    }
+
+    // 初始化自動載入
+    window.onload = () => {
+        loadSample('COA-HD-2606-0418');
+        applyRPATemplate('youtube');
+    };
+</script>
+</body>
+</html>

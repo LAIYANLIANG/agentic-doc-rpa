@@ -1,0 +1,34 @@
+# macOS & System files
+.DS_Store
+
+# Python virtual environments & bytecode
+.venv_airflow/
+.venv_rpa_ocr/
+__pycache__/
+*.pyc
+
+# Local runtime & staging directories
+uploads/
+/tmp/
+airflow_home/
+.chrome_user_data/
+
+# Confidential Planning, Templates & Internal Work Records
+plan_doc/
+README_Standard_Template/
+report/
+
+# Private Algorithms, Models & Experimental Tests
+*bayesian*
+*_private*
+private/
+
+# Local databases & binary state
+*.sqlite
+*.sqlite3
+*.db
+
+# Local backups
+.git_backup*
+*.bak
+*.tmp
